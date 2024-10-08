@@ -1,0 +1,208 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# If you come from bash you might have to change your $PATH.
+export PATH=$HOME/bin:/opt/homebrew/bin:$HOME/.local/bin:/usr/local/bin:$PATH
+
+# User configuration
+export MANPATH="/usr/local/man:$MANPATH"
+
+# You may need to manually set your language environment
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+export EDITOR=vim
+
+# Compilation flags
+export ARCHFLAGS="-arch $(uname -m)"
+
+# llvm
+# If you need to have llvm first in your PATH, run:
+export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+
+# For compilers to find llvm you may need to set:
+export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
+
+# Example aliases
+alias ezc="vim ~/.zshrc"
+alias szc="source ~/.zshrc"
+
+eval "$(vfox activate zsh)"
+
+source ~/.zplug/init.zsh
+
+zplug romkatv/powerlevel10k, as:theme, depth:1
+
+. $HOME/.zplug/repos/romkatv/powerlevel10k/powerlevel10k.zsh-theme
+
+# Make sure to use double quotes
+zplug "zsh-users/zsh-history-substring-search"
+
+# Use the package as a command
+# And accept glob patterns (e.g., brace, wildcard, ...)
+zplug "Jxck/dotfiles", as:command, use:"bin/{histuniq,color}"
+
+# Can manage everything e.g., other person's zshrc
+zplug "tcnksm/docker-alias", use:zshrc
+
+# Disable updates using the "frozen" tag
+zplug "k4rthik/git-cal", as:command, frozen:1
+
+# Supports oh-my-zsh plugins and the like
+zplug "plugins/git",   from:oh-my-zsh
+
+# Also prezto
+zplug "modules/prompt", from:prezto
+
+# Load if "if" tag returns true
+zplug "lib/clipboard", from:oh-my-zsh, if:"[[ $OSTYPE == *darwin* ]]"
+
+# Run a command after a plugin is installed/updated
+# Provided, it requires to set the variable like the following:
+# ZPLUG_SUDO_PASSWORD="*********"
+zplug "jhawthorn/fzy", \
+    as:command, \
+    rename-to:fzy, \
+    hook-build:"make && sudo make install"
+
+source <(fzf --zsh)
+
+# Supports checking out a specific branch/tag/commit
+zplug "b4b4r07/enhancd", at:v1
+zplug "mollifier/anyframe", at:4c23cb60
+
+# Can manage gist file just like other packages
+zplug "b4b4r07/79ee61f7c140c63d2786", \
+    from:gist, \
+    as:command, \
+    use:get_last_pane_path.sh
+
+# Support bitbucket
+zplug "b4b4r07/hello_bitbucket", \
+    from:bitbucket, \
+    as:command, \
+    use:"*.sh"
+
+# Rename a command with the string captured with `use` tag
+zplug "b4b4r07/httpstat", \
+    as:command, \
+    use:'(*).sh', \
+    rename-to:'$1'
+
+# Set the priority when loading
+# e.g., zsh-syntax-highlighting must be loaded
+# after executing compinit command and sourcing other plugins
+# (If the defer tag is given 2 or above, run after compinit command)
+zplug "zsh-users/zsh-syntax-highlighting", defer:2
+
+zplug "zsh-users/zsh-autosuggestions", from:github
+
+# Install plugins if there are plugins that have not been installed
+if ! zplug check --verbose; then
+    printf "Install? [y/N]: "
+    if read -q; then
+        echo; zplug install
+    fi
+fi
+
+# Then, source plugins and add commands to $PATH
+zplug load
+
+proj() {
+  cd $(find ~/projects ~/magic -maxdepth 1 -type d | selecta)
+}
+
+# By default, ^S freezes terminal output and ^Q resumes it. Disable that so
+# that those keys can be used for other things.
+unsetopt flowcontrol
+# Run Selecta in the current working directory, appending the selected path, if
+# any, to the current command, followed by a space.
+function insert-selecta-path-in-command-line() {
+    local selected_path
+    # Print a newline or we'll clobber the old prompt.
+    echo
+    # Find the path; abort if the user doesn't select anything.
+    selected_path=$(find * -type f | selecta) || return
+    # Append the selection to the current command buffer.
+    eval 'LBUFFER="$LBUFFER$selected_path "'
+    # Redraw the prompt since Selecta has drawn several new lines of text.
+    zle reset-prompt
+}
+# Create the zle widget
+zle -N insert-selecta-path-in-command-line
+# Bind the key to the newly created widget
+bindkey "^S" "insert-selecta-path-in-command-line"
+
+alias findpid="ps axww -o pid,user,%cpu,%mem,start,time,command | selecta | sed 's/^ *//' | cut -f1 -d' '"
+
+zplug 'zplug/zplug', hook-build:'zplug --self-manage'
+
+alias code="code-insiders"
+
+export PATH=~/.rbenv/versions/3.3.5/bin:$PATH
+# rbenv installed to `~/.rbenv`
+FPATH=~/.rbenv/completions:"$FPATH"
+
+autoload -U compinit
+compinit -i
+
+if [ -x "$(command -v colorls)" ]; then
+  source $(dirname $(gem which colorls))/tab_complete.sh
+  alias ls="colorls"
+  alias la="colorls -al"
+  alias lc='colorls -lA --sd'
+fi
+
+# node
+export NODE_ENV=development
+
+export REACT_EDITOR=code-insider
+
+alias reload="exec $SHELL"
+
+alias ip="ifconfig en0 | grep inet | grep -v inet6 | cut -d ' ' -f2"
+
+PATH=$(zsh -fc "typeset -TU P=$PATH p; echo \$P")
+
+function cd() {
+  builtin cd "$@"
+
+  if [[ -z "$VIRTUAL_ENV" ]] ; then
+    ## If env folder is found then activate the vitualenv
+      if [[ -d ./venv ]] ; then
+        source ./venv/bin/activate
+      fi
+  else
+    ## check the current folder belong to earlier VIRTUAL_ENV folder
+    # if yes then do nothing
+    # else deactivate
+      parentdir="$(dirname "$VIRTUAL_ENV")"
+      if [[ "$PWD"/ != "$parentdir"/* ]] ; then
+        deactivate
+      fi
+  fi
+}
+
+typeset -U path
+
+alias l='ls -l'
+alias la='ls -a'
+alias lla='ls -la'
+alias lt='ls --tree'
+
+export WASI_SYSROOT_PATH=$(brew --prefix llvm)/wasi-sysroot
+
+[ -f "/Users/denniswon/.local/share/juvix/env" ] && source "/Users/denniswon/.local/share/juvix/env" # juvix-env
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+(( ! ${+functions[p10k]} )) || p10k finalize
+
+# Wasmer
+export WASMER_DIR="/Users/dennis.won/.wasmer"
+[ -s "$WASMER_DIR/wasmer.sh" ] && source "$WASMER_DIR/wasmer.sh"
